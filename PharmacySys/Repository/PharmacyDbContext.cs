@@ -6,6 +6,11 @@ namespace PharmacySys.Repository
     public class PharmacyDbContext : DbContext
     {
         public DbSet<Pharmacy> Pharmacy { get; set; }
+        public DbSet<Delivery> Deliveries { get; set; }
+
+        public DbSet<WarehouseProfit> Warehouses { get; set; }
+
+        public DbSet<Pharmacists> Pharmacists { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

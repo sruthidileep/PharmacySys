@@ -11,6 +11,10 @@ public interface IPharmacyRepository
     Task<Pharmacy> GetPharmacyById(int id);
     Task<List<Pharmacy>> GetAllPharmacies();
     Task<bool> UpdatePharmacy(Pharmacy pharmacy);
+    IEnumerable<Delivery> GetDeliveryDetails();
+
+    List<WarehouseProfit> GetWarehouseProfitReport();
+    List<Pharmacists> GetPharmacistProductionReport();
 
 }
 public class PharmacyRepository : IPharmacyRepository
@@ -59,5 +63,65 @@ public class PharmacyRepository : IPharmacyRepository
         int rowsAffected = await _dbContext.SaveChangesAsync();
 
         return rowsAffected > 0;
+    }
+
+    public IEnumerable<Delivery> GetDeliveryDetails()
+    {
+        var query = @"SELECT
+                    d.DeliveryID,
+                    w.Name AS WarehouseFrom,
+                    p.Name AS PharmacyTo,
+                    d.DrugName,
+                    d.UnitCount,
+                    d.UnitPrice,
+                    d.TotalPrice,
+                    d.DeliveryDate
+                FROM
+                    Deliveries d
+                JOIN
+                    Warehouses w ON d.WarehouseID = w.WarehouseID
+                JOIN
+                    Pharmacy p ON d.PharmacyID = p.ID";
+
+        return _dbContext.Deliveries.FromSqlRaw(query);
+    }
+
+    public List<WarehouseProfit> GetWarehouseProfitReport()
+    {
+        var query = @"
+    SELECT
+        w.WarehouseID,
+        w.Name AS Warehouse,
+        SUM(d.TotalPrice) AS TotalRevenue,
+        SUM(d.UnitCount) AS TotalUnitCount,
+        SUM(d.TotalPrice) / SUM(d.UnitCount) AS AverageProfit
+    FROM
+        Warehouses w
+    LEFT JOIN
+        Deliveries d ON d.WarehouseID = w.WarehouseID
+    GROUP BY
+        w.WarehouseID, w.Name
+    ORDER BY
+        SUM(d.TotalPrice) DESC";
+
+        return _dbContext.Warehouses.FromSqlRaw(query).ToList();
+    }
+
+    public List<Pharmacists> GetPharmacistProductionReport()
+    {
+        var query = from pharmacist in _dbContext.Pharmacists
+                    join delivery in _dbContext.Deliveries on pharmacist.PrimaryDrug equals delivery.DrugName
+                    join pharmacy in _dbContext.Pharmacy on delivery.PharmacyId equals pharmacy.Id
+                    group new { pharmacist, delivery } by new { pharmacist.PharmacistID, pharmacy.Name, pharmacist.PrimaryDrug } into g
+                    select new Pharmacists
+                    {
+                        PharmacistID = g.Key.PharmacistID,
+                        Name = g.Key.Name,
+                        PrimaryDrug = g.Key.PrimaryDrug,
+                        TotalUnitCountPrimaryDrug = g.Sum(x => x.delivery.DrugName == g.Key.PrimaryDrug ? x.delivery.UnitCount : 0),
+                        TotalUnitCountOtherDrugs = g.Sum(x => x.delivery.DrugName != g.Key.PrimaryDrug ? x.delivery.UnitCount : 0)
+                    };
+
+        return query.ToList();
     }
 }

@@ -50,5 +50,25 @@ public class PharmacyController : ControllerBase
         return NoContent();
     }
 
-  
+    [HttpGet("delivery-details")]
+    public IActionResult GetDeliveryDetails()
+    {
+        var deliveryDetails = _pharmacyManager.GetDeliveryDetails();
+        return Ok(deliveryDetails);
+    }
+
+    [HttpGet("warehouse-profit")]
+    public IActionResult GetWarehouseProfitReport()
+    {
+        var report = _pharmacyManager.GetWarehouseProfitReport();
+        return Ok(report);
+    }
+
+    [HttpGet("pharmacist-production")]
+    public IActionResult GetPharmacistProductionReport()
+    {
+        var report = _pharmacyManager.GetPharmacistProductionReport();
+        return Ok(report);
+    }
+
 }
